@@ -54,8 +54,8 @@ map.on("click", (e) => {
     infoCard.style.display = "block"
   }
 })
+
 calculateBtn.addEventListener("click", () => {
-  console.log(startPoint, endPoint)
   if (!startPoint || !endPoint) {
     showError("Por favor selecciona un punto de inicio y un punto final.")
     return
@@ -68,53 +68,11 @@ calculateBtn.addEventListener("click", () => {
 
   if (pathLine) {
     map.removeLayer(pathLine)
-    pathLine = null   
+    pathLine = null // Reiniciar el pathLine
   }
 
-  // Calcular ruta usando A*
-  try {
-    const path = aStar([], startPoint, endPoint)
-
-    if (path.length > 0) {
-      pathLine = L.polyline(
-        path.map((p) => [p.lat, p.lng]),
-        {
-          color: "blue",
-          weight: 5,
-          opacity: 0.7,
-        },
-      ).addTo(map)
-
-      map.fitBounds(pathLine.getBounds(), { padding: [50, 50] })
-
-      let total = 0
-      for (let i = 1; i < path.length; i++) {
-        total += distance(path[i - 1], path[i])
-      }
-
-      const directions = generateDirections(path)
-
-      totalDistance.textContent = `Distancia total: ${(total * 1000).toFixed(0)} metros`
-
-      directionsList.innerHTML = ""
-      directions.forEach((dir) => {
-        const li = document.createElement("li")
-        li.textContent = dir.text
-        directionsList.appendChild(li)
-      })
-
-      routeInfo.style.display = "block"
-      infoCard.style.display = "none"
-    } else {
-      showError("No se pudo encontrar una ruta entre los puntos seleccionados.")
-    }
-  } catch (err) {
-    showError("Error al calcular la ruta: " + err.message)
-  } finally {
-    isCalculating = false
-    calculateBtn.disabled = false
-    calculateBtn.textContent = "Calcular Ruta"
-  }
+  // Llamada a la API de OSRM para obtener la ruta real
+  fetchOSRMRoute(startPoint, endPoint)
 })
 
 resetBtn.addEventListener("click", () => {
@@ -145,182 +103,90 @@ function hideError() {
   errorMessage.style.display = "none"
 }
 
-// Implementación del algoritmo A*
-function aStar(grid, start, end) {
-  const openSet = [start]
-  const closedSet = []
-  const cameFrom = {}
+function fetchOSRMRoute(start, end) {
+  const startLon = start.lng;
+  const startLat = start.lat;
+  const endLon = end.lng;
+  const endLat = end.lat;
 
-  const gScore = {}
-  gScore[`${start.lat},${start.lng}`] = 0
+  const url = `http://router.project-osrm.org/route/v1/driving/${startLon},${startLat};${endLon},${endLat}?overview=full&geometries=polyline`;
 
-  const fScore = {}
-  fScore[`${start.lat},${start.lng}`] = heuristic(start, end)
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      if (data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        const polyline = decodePolyline(route.geometry);
+        pathLine = L.polyline(polyline, {
+          color: "blue",
+          weight: 5,
+          opacity: 0.7,
+        }).addTo(map);
 
-  const maxIterations = 10000
-  let iterations = 0
+        map.fitBounds(pathLine.getBounds(), { padding: [50, 50] });
 
-  while (openSet.length > 0 && iterations < maxIterations) {
-    const current = lowestFScore(openSet, fScore)
+        let total = 0;
+        for (let i = 1; i < polyline.length; i++) {
+          total += distance(polyline[i - 1], polyline[i]);
+        }
 
-    if (Math.abs(current.lat - end.lat) < 0.0001 && Math.abs(current.lng - end.lng) < 0.0001) {
-      return reconstructPath(cameFrom, current)
-    }
-
-    openSet.splice(openSet.indexOf(current), 1)
-    closedSet.push(current)
-
-    const neighbors = getNeighbors(current, grid)
-
-    for (const neighbor of neighbors) {
-      const neighborKey = `${neighbor.lat},${neighbor.lng}`
-
-      if (closedSet.some((p) => Math.abs(p.lat - neighbor.lat) < 0.0001 && Math.abs(p.lng - neighbor.lng) < 0.0001)) {
-        continue
+        totalDistance.textContent = `Distancia total: ${(total * 1000).toFixed(0)} metros`;
+        routeInfo.style.display = "block";
+        infoCard.style.display = "none";
+      } else {
+        showError("No se pudo encontrar una ruta entre los puntos seleccionados.");
       }
-
-      const tentativeGScore = gScore[`${current.lat},${current.lng}`] + distance(current, neighbor)
-
-      if (!openSet.some((p) => Math.abs(p.lat - neighbor.lat) < 0.0001 && Math.abs(p.lng - neighbor.lng) < 0.0001)) {
-        openSet.push(neighbor)
-      } else if (tentativeGScore >= (gScore[neighborKey] || Number.POSITIVE_INFINITY)) {
-        continue
-      }
-
-      cameFrom[neighborKey] = current
-      gScore[neighborKey] = tentativeGScore
-      fScore[neighborKey] = gScore[neighborKey] + heuristic(neighbor, end)
-    }
-
-    iterations++
-  }
-
-  if (iterations >= maxIterations) {
-    showError("Demasiadas iteraciones. No se pudo encontrar una ruta.")
-  }
-
-  return []
+    })
+    .catch(error => {
+      showError("Error al calcular la ruta: " + error.message);
+    })
 }
 
-function lowestFScore(openSet, fScore) {
-  let lowest = openSet[0]
-  let lowestScore = fScore[`${lowest.lat},${lowest.lng}`] || Number.POSITIVE_INFINITY
+function decodePolyline(encoded) {
+  const polyline = [];
+  let index = 0, len = encoded.length;
+  let lat = 0, lng = 0;
 
-  for (const point of openSet) {
-    const score = fScore[`${point.lat},${point.lng}`] || Number.POSITIVE_INFINITY
-    if (score < lowestScore) {
-      lowest = point
-      lowestScore = score
-    }
+  while (index < len) {
+    let shift = 0, result = 0;
+    let byte;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    const deltaLat = result & 1 ? ~(result >> 1) : result >> 1;
+    lat += deltaLat;
+
+    shift = 0;
+    result = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    const deltaLng = result & 1 ? ~(result >> 1) : result >> 1;
+    lng += deltaLng;
+
+    polyline.push([lat / 1e5, lng / 1e5]);
   }
-
-  return lowest
-}
-
-function heuristic(a, b) {
-  const R = 6371 // Radio de la Tierra en km
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180
-  const dLon = ((b.lng - a.lng) * Math.PI) / 180
-  const lat1 = (a.lat * Math.PI) / 180
-  const lat2 = (b.lat * Math.PI) / 180
-
-  const x =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2)
-  const c = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x))
-  return R * c
+  return polyline;
 }
 
 function distance(a, b) {
   return heuristic(a, b)
 }
 
-function getNeighbors(point, grid) {
-  const neighbors = []
-  const step = 0.001
+function heuristic(a, b) {
+  const R = 6371; // Radio de la Tierra en km
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLon = ((b.lng - a.lng) * Math.PI) / 180;
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
 
-  for (let i = -1; i <= 1; i++) {
-    for (let j = -1; j <= 1; j++) {
-      if (i === 0 && j === 0) continue
-
-      const neighbor = {
-        lat: point.lat + i * step,
-        lng: point.lng + j * step,
-      }
-
-      neighbors.push(neighbor)
-    }
-  }
-  
-  return neighbors
-}
-
-function reconstructPath(cameFrom, current) {
-  const path = [current]
-  let key = `${current.lat},${current.lng}`
-
-  while (cameFrom[key]) {
-    current = cameFrom[key]
-    path.unshift(current)
-    key = `${current.lat},${current.lng}`
-  }
-
-  return path
-}
-
-function generateDirections(path) {
-  if (path.length < 2) return []
-
-  const directions = []
-
-  for (let i = 1; i < path.length; i++) {
-    const prev = path[i - 1]
-    const curr = path[i]
-
-    const bearing = calculateBearing(prev, curr)
-    const dist = distance(prev, curr)
-
-    let direction = ""
-
-    if (bearing >= 337.5 || bearing < 22.5) {
-      direction = "norte"
-    } else if (bearing >= 22.5 && bearing < 67.5) {
-      direction = "noreste"
-    } else if (bearing >= 67.5 && bearing < 112.5) {
-      direction = "este"
-    } else if (bearing >= 112.5 && bearing < 157.5) {
-      direction = "sureste"
-    } else if (bearing >= 157.5 && bearing < 202.5) {
-      direction = "sur"
-    } else if (bearing >= 202.5 && bearing < 247.5) {
-      direction = "suroeste"
-    } else if (bearing >= 247.5 && bearing < 292.5) {
-      direction = "oeste"
-    } else {
-      direction = "noroeste"
-    }
-
-    directions.push({
-      text: `Continúa hacia el ${direction} por ${(dist * 1000).toFixed(0)} metros`,
-      distance: dist,
-    })
-  }
-
-  return directions
-}
-
-function calculateBearing(start, end) {
-  const startLat = (start.lat * Math.PI) / 180
-  const startLng = (start.lng * Math.PI) / 180
-  const endLat = (end.lat * Math.PI) / 180
-  const endLng = (end.lng * Math.PI) / 180
-
-  const y = Math.sin(endLng - startLng) * Math.cos(endLat)
-  const x = Math.cos(startLat) * Math.sin(endLat) - Math.sin(startLat) * Math.cos(endLat) * Math.cos(endLng - startLng)
-
-  let bearing = (Math.atan2(y, x) * 180) / Math.PI
-  if (bearing < 0) {
-    bearing += 360
-  }
-
-  return bearing
+  const x =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+  const c = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+  return R * c;
 }
