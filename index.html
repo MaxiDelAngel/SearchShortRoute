@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador de Rutas con A*</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .content {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            gap: 20px;
+        }
+        #map {
+            height: 500px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #3a7bc8;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        button.secondary {
+            background-color: #f1f1f1;
+            color: #333;
+        }
+        button.secondary:hover {
+            background-color: #e1e1e1;
+        }
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        .instructions {
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        .status {
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .error {
+            color: #e53935;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #ffebee;
+            border-radius: 4px;
+            display: none;
+        }
+        .route-info {
+            margin-top: 20px;
+            display: none;
+        }
+        .route-info h3 {
+            margin-top: 0;
+        }
+        ol {
+            padding-left: 20px;
+        }
+        .info-icon {
+            color: #4a90e2;
+            margin-right: 5px;
+        }
+        footer {
+            background-color: #f1f1f1;
+            padding: 10px;
+            text-align: center;
+            position: relative;
+            bottom: 0;
+        }
+        
+        @media (min-width: 768px) {
+            .content {
+                flex-direction: row;
+            }
+            #map {
+                flex: 2;
+                height: auto;
+            }
+            .sidebar {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+            }
+            
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Encuentra tu ruta mas corta!</h1>
+            <p>Encuentra la ruta más corta entre dos puntos en un mapa utilizando el algoritmo A*</p>
+        </header>
+        
+        <div class="content">
+            <div id="map"></div>
+            
+            <div class="sidebar">
+                <div class="card">
+                    <h2>Instrucciones</h2>
+                    <p class="instructions">Selecciona dos puntos en el mapa para encontrar la ruta más corta</p>
+                    
+                    <div class="status" id="mode-status">Modo actual: Seleccionar punto de inicio</div>
+                    
+                    <div class="controls">
+                        <button id="calculate-btn" disabled>Calcular Ruta</button>
+                        <button id="reset-btn" class="secondary">Reiniciar</button>
+                    </div>
+                    
+                    <div id="error-message" class="error"></div>
+                </div>
+                
+                <div id="route-info" class="card route-info">
+                    <h2>Ruta Encontrada</h2>
+                    <div id="total-distance"></div>
+                    
+                    <div>
+                        <h3>Instrucciones:</h3>
+                        <ol id="directions-list"></ol>
+                    </div>
+                </div>
+                
+                <div id="info-card" class="card" style="display: none;">
+                    <h2>Información</h2>
+                    <p><span class="info-icon">ℹ️</span> Haz clic en "Calcular Ruta" para encontrar el camino más corto entre los puntos seleccionados.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <p style="text-align: center;">&copy; 2025 Buscador de Rutas</p>
+        <p style="text-align: center;">Desarrollado por Maximiliano Del Angel Ojeda</p>
+        <p style="text-align: center;">Linkedin: <a href="https://www.linkedin.com/in/maximilianodelangelojeda/" target="_blank">Maximiliano Del Angel Ojeda</a></p>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
