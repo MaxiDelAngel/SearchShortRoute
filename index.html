@@ -5,131 +5,382 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buscador de Rutas con A*</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
+        :root {
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+            --secondary-color: #f3f4f6;
+            --text-color: #1f2937;
+            --light-text: #6b7280;
+            --border-color: #e5e7eb;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --transition: all 0.3s ease;
+        }
+
+        * {
             margin: 0;
             padding: 0;
-            font-family: Arial, sans-serif;
+            box-sizing: border-box;
         }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f9fafb;
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
         .container {
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            max-width: 1200px;
+            min-height: 100vh;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 20px;
-            box-sizing: border-box;
+            padding: 1rem;
         }
+
         header {
             text-align: center;
-            margin-bottom: 20px;
+            padding: 1.5rem 0;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
         }
+
+        header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: var(--light-text);
+            font-size: 1.1rem;
+        }
+
         .content {
             display: flex;
             flex-direction: column;
             flex: 1;
-            gap: 20px;
+            gap: 1.5rem;
         }
+
         #map {
             height: 500px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border-color);
+            z-index: 1;
         }
-        .controls {
+
+        .sidebar {
             display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
+            flex-direction: column;
+            gap: 1.5rem;
         }
-        button {
-            padding: 10px 15px;
-            background-color: #4a90e2;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        button:hover {
-            background-color: #3a7bc8;
-        }
-        button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        button.secondary {
-            background-color: #f1f1f1;
-            color: #333;
-        }
-        button.secondary:hover {
-            background-color: #e1e1e1;
-        }
+
         .card {
             background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            padding: 20px;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
         }
+
+        .card h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .card h2::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 24px;
+            background-color: var(--primary-color);
+            margin-right: 10px;
+            border-radius: 2px;
+        }
+
         .instructions {
-            margin-top: 0;
-            margin-bottom: 15px;
+            margin-bottom: 1.2rem;
+            color: var(--light-text);
         }
+
         .status {
-            font-weight: bold;
-            margin-bottom: 15px;
+            font-weight: 500;
+            margin-bottom: 1.2rem;
+            padding: 0.8rem;
+            background-color: #f0f9ff;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-color);
         }
+
+        .controls {
+            display: flex;
+            gap: 0.8rem;
+            margin-bottom: 1rem;
+        }
+
+        button {
+            padding: 0.8rem 1.2rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 1rem;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background-color: #cbd5e1;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button.secondary {
+            background-color: white;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+
+        button.secondary:hover {
+            background-color: var(--secondary-color);
+        }
+
         .error {
-            color: #e53935;
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #ffebee;
-            border-radius: 4px;
+            color: #ef4444;
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #fef2f2;
+            border-radius: 8px;
+            border-left: 4px solid #ef4444;
             display: none;
         }
+
         .route-info {
-            margin-top: 20px;
             display: none;
         }
+
         .route-info h3 {
-            margin-top: 0;
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin: 1.2rem 0 0.8rem;
+            color: var(--text-color);
         }
-        ol {
-            padding-left: 20px;
+
+        #total-distance {
+            font-size: 1.1rem;
+            font-weight: 500;
+            padding: 0.8rem;
+            background-color: #f0f9ff;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
         }
+
+        #total-distance::before {
+            content: '\f1b9';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            margin-right: 0.8rem;
+            color: var(--primary-color);
+        }
+
+        #directions-list {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #directions-list li {
+            padding: 0.8rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: flex-start;
+        }
+
+        #directions-list li:last-child {
+            border-bottom: none;
+        }
+
+        .direction-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .direction-number {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            font-size: 0.9rem;
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .direction-text {
+            flex: 1;
+        }
+
+        .direction-distance {
+            color: var(--light-text);
+            font-size: 0.9rem;
+            display: block;
+            margin-top: 0.3rem;
+        }
+
         .info-icon {
-            color: #4a90e2;
-            margin-right: 5px;
+            color: var(--primary-color);
+            margin-right: 0.5rem;
         }
+
         footer {
-            background-color: #f1f1f1;
-            padding: 10px;
+            background-color: white;
+            padding: 1.5rem;
             text-align: center;
-            position: relative;
-            bottom: 0;
+            margin-top: 2rem;
+            border-top: 1px solid var(--border-color);
+            border-radius: 12px 12px 0 0;
         }
-        
+
+        footer p {
+            margin: 0.5rem 0;
+            color: var(--light-text);
+        }
+
+        footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        footer a:hover {
+            color: var(--primary-hover);
+            text-decoration: underline;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary-color: #3b82f6;
+                --primary-hover: #60a5fa;
+                --secondary-color: #374151;
+                --text-color: #f9fafb;
+                --light-text: #d1d5db;
+                --border-color: #4b5563;
+                --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+            }
+            
+            body {
+                background-color: #1f2937;
+            }
+            
+            .card, footer {
+                background-color: #111827;
+            }
+            
+            .status {
+                background-color: #1e3a8a;
+                border-left: 4px solid #60a5fa;
+            }
+            
+            #total-distance {
+                background-color: #1e3a8a;
+            }
+            
+            button.secondary {
+                background-color: #374151;
+                border-color: #4b5563;
+            }
+            
+            button.secondary:hover {
+                background-color: #4b5563;
+            }
+            
+            .error {
+                background-color: #7f1d1d;
+                border-left: 4px solid #ef4444;
+            }
+        }
+
         @media (min-width: 768px) {
             .content {
                 flex-direction: row;
             }
+            
             #map {
                 flex: 2;
                 height: auto;
-            }
-            .sidebar {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                gap: 20px;
+                min-height: 600px;
             }
             
+            .sidebar {
+                flex: 1;
+                max-width: 400px;
+                max-height: 80vh;
+                overflow-y: auto;
+                position: sticky;
+                top: 1rem;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .leaflet-popup-content {
+            margin: 0.8rem 1rem;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .leaflet-container a.leaflet-popup-close-button {
+            top: 8px;
+            right: 8px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Encuentra tu ruta mas corta!</h1>
-            <p>Encuentra la ruta más corta entre dos puntos en un mapa utilizando el algoritmo A*</p>
+            <h1>Encuentra tu ruta más corta</h1>
+            <p>Calcula la ruta óptima entre dos puntos utilizando algoritmos avanzados</p>
         </header>
         
         <div class="content">
@@ -138,13 +389,22 @@
             <div class="sidebar">
                 <div class="card">
                     <h2>Instrucciones</h2>
-                    <p class="instructions">Selecciona dos puntos en el mapa para encontrar la ruta más corta</p>
+                    <p class="instructions">Selecciona dos puntos en el mapa para encontrar la ruta más corta entre ellos.</p>
                     
-                    <div class="status" id="mode-status">Modo actual: Seleccionar punto de inicio</div>
+                    <div class="status" id="mode-status">
+                        <i class="fas fa-map-marker-alt" style="margin-right: 8px;"></i>
+                        Modo actual: Seleccionar punto de inicio
+                    </div>
                     
                     <div class="controls">
-                        <button id="calculate-btn" disabled>Calcular Ruta</button>
-                        <button id="reset-btn" class="secondary">Reiniciar</button>
+                        <button id="calculate-btn" disabled>
+                            <i class="fas fa-route"></i>
+                            Calcular Ruta
+                        </button>
+                        <button id="reset-btn" class="secondary">
+                            <i class="fas fa-redo"></i>
+                            Reiniciar
+                        </button>
                     </div>
                     
                     <div id="error-message" class="error"></div>
@@ -155,22 +415,31 @@
                     <div id="total-distance"></div>
                     
                     <div>
-                        <h3>Instrucciones:</h3>
+                        <h3>
+                            <i class="fas fa-directions" style="margin-right: 8px; color: var(--primary-color);"></i>
+                            Instrucciones:
+                        </h3>
                         <ol id="directions-list"></ol>
                     </div>
                 </div>
                 
                 <div id="info-card" class="card" style="display: none;">
                     <h2>Información</h2>
-                    <p><span class="info-icon">ℹ️</span> Haz clic en "Calcular Ruta" para encontrar el camino más corto entre los puntos seleccionados.</p>
+                    <p>
+                        <i class="fas fa-info-circle info-icon"></i>
+                        Haz clic en "Calcular Ruta" para encontrar el camino más corto entre los puntos seleccionados.
+                    </p>
                 </div>
             </div>
         </div>
     </div>
     <footer>
-        <p style="text-align: center;">&copy; 2025 Buscador de Rutas</p>
-        <p style="text-align: center;">Desarrollado por Maximiliano Del Angel Ojeda</p>
-        <p style="text-align: center;">Linkedin: <a href="https://www.linkedin.com/in/maximilianodelangelojeda/" target="_blank">Maximiliano Del Angel Ojeda</a></p>
+        <p>&copy; 2025 Buscador de Rutas</p>
+        <p>Desarrollado por Maximiliano Del Angel Ojeda</p>
+        <p>
+            <i class="fab fa-linkedin" style="margin-right: 5px; color: var(--primary-color);"></i>
+            <a href="https://www.linkedin.com/in/maximilianodelangelojeda/" target="_blank">Maximiliano Del Angel Ojeda</a>
+        </p>
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
