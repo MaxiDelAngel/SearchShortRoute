@@ -7,8 +7,8 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-place_name = "Tampico, Mexico"
-graph = ox.graph_from_place(place_name, network_type='all')
+place_name = "Tampico, Mexico" # Pongo restricción para solamente pasar por caminos para vehiculos de la ciudad de Tampico
+graph = ox.graph_from_place(place_name, network_type='drive') # Cambiar a all para incluir caminos peatonales y ciclistas
 
 # Función heurística para A*
 def heuristic(u, v):
