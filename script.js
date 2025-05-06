@@ -21,6 +21,8 @@ const totalDistance = document.getElementById("total-distance");
 const directionsList = document.getElementById("directions-list");
 const infoCard = document.getElementById("info-card");
 
+let startTime, endTime;
+
 // Evento de clic en el mapa
 map.on("click", (e) => {
   const { lat, lng } = e.latlng;
@@ -62,6 +64,9 @@ calculateBtn.addEventListener("click", () => {
     return;
   }
 
+  startTime = new Date().getTime();  
+  document.getElementById("calculation-time").style.display = "block";  
+
   isCalculating = true;
   calculateBtn.disabled = true;
   calculateBtn.textContent = "Calculando...";
@@ -69,7 +74,7 @@ calculateBtn.addEventListener("click", () => {
 
   if (pathLine) {
     map.removeLayer(pathLine);
-    pathLine = null; 
+    pathLine = null;
   }
 
   directionsList.innerHTML = "";
@@ -82,7 +87,7 @@ calculateBtn.addEventListener("click", () => {
       start_lon: startPoint.lng,
       end_lat: endPoint.lat,
       end_lon: endPoint.lng,
-      use_astar: false //True si se quiere usar A* y False si se quiere usar Dijkstra
+      use_astar: true // True si se quiere usar A* y False si se quiere usar Dijkstra
     })
   })
   .then(response => response.json())
@@ -111,6 +116,11 @@ calculateBtn.addEventListener("click", () => {
 
       routeInfo.style.display = "block";
       infoCard.style.display = "none";
+
+      // Calcular el tiempo de ejecución
+      endTime = new Date().getTime();  // Guardamos el tiempo final
+      const timeTaken = ((endTime - startTime) / 1000).toFixed(2); // Tiempo en segundos
+      document.getElementById("time-display").textContent = timeTaken; // Mostrar tiempo
 
       isCalculating = false;
       calculateBtn.disabled = false;
@@ -256,4 +266,6 @@ resetBtn.addEventListener("click", () => {
   routeInfo.style.display = "none";
   infoCard.style.display = "none";
   directionsList.innerHTML = "";
+
+  document.getElementById("calculation-time").style.display = "none"; 
 });

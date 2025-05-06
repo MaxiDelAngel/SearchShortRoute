@@ -381,10 +381,9 @@
         <header>
             <h1>Encuentra tu ruta más corta</h1>
             <p>Calcula la ruta óptima entre dos puntos utilizando A* o Dijkstra</p>
-        </header>
-        
+        </header>      
         <div class="content">
-            <div id="map"></div>z
+            <div id="map"></div>
             
             <div class="sidebar">
                 <div class="card">
@@ -409,11 +408,13 @@
                     
                     <div id="error-message" class="error"></div>
                 </div>
-                
                 <div id="route-info" class="card route-info">
                     <h2>Ruta Encontrada</h2>
+                    <div id="calculation-time" class="status" style="display:none;">
+                        <i class="fas fa-clock" style="margin-right: 8px;"></i>
+                        Tiempo de cálculo: <span id="time-display">0</span> segundos
+                    </div>    
                     <div id="total-distance"></div>
-                    
                     <div>
                         <h3>
                             <i class="fas fa-directions" style="margin-right: 8px; color: var(--primary-color);"></i>
